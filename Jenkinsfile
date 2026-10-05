@@ -10,7 +10,7 @@ pipeline {
         GITHUB_REPO   = 'https://github.com/saravananmnm/student_rest_api.git'
         GITHUB_BRANCH = 'master'
 
-        // Docker
+        // Dockerfile
         DOCKER_IMAGE = 'saro/student_mgmt'
         DOCKER_TAG   = "${BUILD_NUMBER}"
 
@@ -31,6 +31,40 @@ pipeline {
                 )
             }
         }
+
+        stage('Debug Workspace') {
+            steps {
+                bat '''
+            echo ==============================
+            echo CURRENT DIRECTORY
+            echo ==============================
+            cd
+
+            echo.
+            echo ==============================
+            echo WORKSPACE FILES
+            echo ==============================
+            dir /a
+
+            echo.
+            echo ==============================
+            echo DOCKERFILE SEARCH
+            echo ==============================
+            dir /s /b Dockerfile*
+
+            echo.
+            echo ==============================
+            echo DOCKERFILE ROOT CHECK
+            echo ==============================
+            if exist Dockerfile (
+                echo FOUND: Dockerfile
+            ) else (
+                echo NOT FOUND: Dockerfile
+            )
+        '''
+            }
+        }
+
 
         stage('Check Java') {
             steps {
@@ -78,17 +112,17 @@ pipeline {
             }
         }
 
-        stage('Docker Build') {
+        stage('Dockerfile Build') {
             steps {
-                echo 'Building Docker image...'
+                echo 'Building Dockerfile image...'
 
                 bat 'docker build -t %DOCKER_IMAGE%:%DOCKER_TAG% -t %DOCKER_IMAGE%:latest .'
             }
         }
 
-        stage('Docker Push') {
+        stage('Dockerfile Push') {
             steps {
-                echo 'Pushing Docker image to Docker Hub...'
+                echo 'Pushing Dockerfile image to Dockerfile Hub...'
 
                 withCredentials([
                         usernamePassword(
@@ -131,7 +165,7 @@ pipeline {
 
         stage('Verify') {
             steps {
-                echo 'Checking Docker container...'
+                echo 'Checking Dockerfile container...'
 
                 bat 'docker ps'
             }
