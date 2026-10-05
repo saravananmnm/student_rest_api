@@ -1,25 +1,26 @@
 pipeline {
     agent any
 
+    tools {
+        jdk 'JAVA_21'
+    }
+
     environment {
         // GitHub
-        GITHUB_REPO = 'https://github.com/saravananmnm/student_rest_api.git'
+        GITHUB_REPO   = 'https://github.com/saravananmnm/student_rest_api.git'
         GITHUB_BRANCH = 'master'
 
         // Docker
         DOCKER_IMAGE = 'saro/student_mgmt'
-        DOCKER_TAG = "${BUILD_NUMBER}"
+        DOCKER_TAG   = "${BUILD_NUMBER}"
 
         // Application
         CONTAINER_NAME = 'student_mgmt'
-        APP_PORT = '8015'
+        APP_PORT       = '8015'
     }
 
     stages {
 
-        /*
-         * 1. Checkout source code from GitHub
-         */
         stage('Checkout') {
             steps {
                 echo 'Checking out source code from GitHub...'
@@ -31,9 +32,16 @@ pipeline {
             }
         }
 
-        /*
-         * 2. Build Spring Boot application
-         */
+        stage('Check Java') {
+            steps {
+                bat '''
+                    echo JAVA_HOME=%JAVA_HOME%
+                    where java
+                    java -version
+                '''
+            }
+        }
+
         stage('Build') {
             steps {
                 echo 'Building Spring Boot application...'
@@ -42,9 +50,6 @@ pipeline {
             }
         }
 
-        /*
-         * 3. Run unit tests
-         */
         stage('Test') {
             steps {
                 echo 'Running unit tests...'
@@ -53,25 +58,34 @@ pipeline {
             }
         }
 
-        /*
-         * 4. Build Docker image
-         */
+        stage('Check Files') {
+            steps {
+                echo 'Checking Dockerfile and JAR...'
+
+                bat '''
+                    echo.
+                    echo Current directory:
+                    cd
+
+                    echo.
+                    echo Project files:
+                    dir
+
+                    echo.
+                    echo Target files:
+                    dir target
+                '''
+            }
+        }
+
         stage('Docker Build') {
             steps {
                 echo 'Building Docker image...'
 
-                bat """
-                    docker build \
-                        -t ${DOCKER_IMAGE}:${DOCKER_TAG} \
-                        -t ${DOCKER_IMAGE}:latest \
-                        .
-                """
+                bat 'docker build -t %DOCKER_IMAGE%:%DOCKER_TAG% -t %DOCKER_IMAGE%:latest .'
             }
         }
 
-        /*
-         * 5. Push Docker image to Docker Hub
-         */
         stage('Docker Push') {
             steps {
                 echo 'Pushing Docker image to Docker Hub...'
@@ -79,18 +93,16 @@ pipeline {
                 withCredentials([
                         usernamePassword(
                                 credentialsId: 'dockerhub-credentials',
-                                usernameVariable: 'gsaravanan3.3sgm@gmail.com',
-                                passwordVariable: 'f@pbDaqHY96PT=a'
+                                usernameVariable: 'DOCKER_USERNAME',
+                                passwordVariable: 'DOCKER_PASSWORD'
                         )
                 ]) {
 
                     bat '''
-                        echo "f@pbDaqHY96PT=a" | docker login \
-                            -u "gsaravanan3.3sgm@gmail.com" \
-                            --password-stdin
+                        echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin
 
-                        docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
-                        docker push ${DOCKER_IMAGE}:latest
+                        docker push %DOCKER_IMAGE%:%DOCKER_TAG%
+                        docker push %DOCKER_IMAGE%:latest
 
                         docker logout
                     '''
@@ -98,70 +110,54 @@ pipeline {
             }
         }
 
-        /*
-         * 6. Deploy application
-         */
         stage('Deploy') {
             steps {
-                echo 'Deploying Spring Boot application...'
+                echo 'Deploying application...'
 
                 bat '''
-                    docker pull ${DOCKER_IMAGE}:latest
+                    docker pull %DOCKER_IMAGE%:latest
 
-                    docker stop ${CONTAINER_NAME} || true
-                    docker rm ${CONTAINER_NAME} || true
+                    docker stop %CONTAINER_NAME% >nul 2>&1 || exit /b 0
+                    docker rm %CONTAINER_NAME% >nul 2>&1 || exit /b 0
 
-                    docker run -d \
-                        --name ${CONTAINER_NAME} \
-                        -p ${APP_PORT}:8080 \
-                        --restart unless-stopped \
-                        ${DOCKER_IMAGE}:latest
+                    docker run -d ^
+                        --name %CONTAINER_NAME% ^
+                        -p %APP_PORT%:8080 ^
+                        --restart unless-stopped ^
+                        %DOCKER_IMAGE%:latest
                 '''
             }
         }
 
-        /*
-         * 7. Verify deployment
-         */
-        stage('Health Check') {
+        stage('Verify') {
             steps {
-                echo 'Checking application health...'
+                echo 'Checking Docker container...'
 
-                bat '''
-                    sleep 10
-
-                    curl --fail http://localhost:${APP_PORT}/actuator/health
-                '''
+                bat 'docker ps'
             }
         }
     }
 
-    /*
-     * Pipeline result
-     */
     post {
 
         success {
-            echo """
+            echo '''
             ==========================================
-            Deployment Successful!
-            Application: ${DOCKER_IMAGE}
-            Version: ${DOCKER_TAG}
+              Deployment Successful!
             ==========================================
-            """
+            '''
         }
 
         failure {
-            echo """
+            echo '''
             ==========================================
-            Deployment Failed!
-            Check Jenkins console output.
+              Deployment Failed!
             ==========================================
-            """
+            '''
         }
 
         always {
-            echo 'Cleaning Jenkins workspace...'
+            echo 'Cleaning workspace...'
             cleanWs()
         }
     }
