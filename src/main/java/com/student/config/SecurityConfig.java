@@ -55,6 +55,13 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider)
 
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/",
+                                "/index.html",
+                                "/styles.css",
+                                "/app.js",
+                                "/favicon.ico"
+                        ).permitAll()
                         .requestMatchers("/auth/**")
                         .permitAll()
                         // Swagger

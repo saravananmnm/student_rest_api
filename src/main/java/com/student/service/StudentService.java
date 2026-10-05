@@ -86,7 +86,10 @@ public class StudentService {
         if (existingStudent == null) {
             return null;
         }
-        Department department = departmentRepository.findById(existingStudent.getDepartment().getId()).orElseThrow(()-> new ResourceNotFoundException("Department not found"));
+        Long departmentId = updatedStudent.getDepartment() != null && updatedStudent.getDepartment().getId() != null
+                ? updatedStudent.getDepartment().getId()
+                : existingStudent.getDepartment().getId();
+        Department department = departmentRepository.findById(departmentId).orElseThrow(()-> new ResourceNotFoundException("Department not found"));
 
         existingStudent.setFirstName(updatedStudent.getFirstName());
         existingStudent.setLastName(updatedStudent.getLastName());
