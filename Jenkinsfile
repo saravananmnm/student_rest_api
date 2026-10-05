@@ -10,7 +10,7 @@ pipeline {
         GITHUB_REPO   = 'https://github.com/saravananmnm/student_rest_api.git'
         GITHUB_BRANCH = 'master'
 
-        // Dockerfile
+        // Docker
         DOCKER_IMAGE = 'saravanang87/student_mgmt'
         DOCKER_TAG   = "${BUILD_NUMBER}"
 
@@ -24,44 +24,43 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo 'Checking out source code from GitHub...'
-
+                deleteDir()
                 git(
                         branch: "${GITHUB_BRANCH}",
                         url: "${GITHUB_REPO}"
                 )
             }
         }
-
         stage('Debug Workspace') {
             steps {
                 bat '''
-            echo ==============================
-            echo CURRENT DIRECTORY
-            echo ==============================
-            cd
-
-            echo.
-            echo ==============================
-            echo WORKSPACE FILES
-            echo ==============================
-            dir /a
-
-            echo.
-            echo ==============================
-            echo DOCKERFILE SEARCH
-            echo ==============================
-            dir /s /b Dockerfile*
-
-            echo.
-            echo ==============================
-            echo DOCKERFILE ROOT CHECK
-            echo ==============================
-            if exist Dockerfile (
-                echo FOUND: Dockerfile
-            ) else (
-                echo NOT FOUND: Dockerfile
-            )
-        '''
+                    echo ==============================
+                    echo CURRENT DIRECTORY
+                    echo ==============================
+                    cd
+        
+                    echo.
+                    echo ==============================
+                    echo WORKSPACE FILES
+                    echo ==============================
+                    dir /a
+        
+                    echo.
+                    echo ==============================
+                    echo DOCKERFILE SEARCH
+                    echo ==============================
+                    dir /s /b Dockerfile*
+        
+                    echo.
+                    echo ==============================
+                    echo DOCKERFILE ROOT CHECK
+                    echo ==============================
+                    if exist Dockerfile (
+                        echo FOUND: Dockerfile
+                    ) else (
+                        echo NOT FOUND: Dockerfile
+                    )
+                '''
             }
         }
 
@@ -112,17 +111,34 @@ pipeline {
             }
         }
 
-        stage('Dockerfile Build') {
+        stage('Docker Build') {
             steps {
-                echo 'Building Dockerfile image...'
+                echo 'Building Docker image...'
 
                 bat 'docker build -t %DOCKER_IMAGE%:%DOCKER_TAG% -t %DOCKER_IMAGE%:latest .'
             }
         }
-
-        stage('Dockerfile Push') {
+        stage('Docker Login Test') {
             steps {
-                echo 'Pushing Dockerfile image to Dockerfile Hub...'
+                withCredentials([
+                        usernamePassword(
+                                credentialsId: 'dockerhub-credentials',
+                                usernameVariable: 'DOCKER_USERNAME',
+                                passwordVariable: 'DOCKER_PASSWORD'
+                        )
+                ]) {
+                    bat '''
+                        echo Username=[%DOCKER_USERNAME%]
+                        docker logout
+                        echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin
+                    '''
+                }
+            }
+        }
+
+        stage('Docker Push') {
+            steps {
+                echo 'Pushing Docker image to Docker Hub...'
 
                 withCredentials([
                         usernamePassword(
@@ -134,10 +150,8 @@ pipeline {
 
                     bat '''
                         echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin
-
                         docker push %DOCKER_IMAGE%:%DOCKER_TAG%
                         docker push %DOCKER_IMAGE%:latest
-
                         docker logout
                     '''
                 }
@@ -156,7 +170,7 @@ pipeline {
 
                     docker run -d ^
                         --name %CONTAINER_NAME% ^
-                        -p %APP_PORT%:8012 ^
+                        -p %APP_PORT%:8080 ^
                         --restart unless-stopped ^
                         %DOCKER_IMAGE%:latest
                 '''
@@ -165,7 +179,7 @@ pipeline {
 
         stage('Verify') {
             steps {
-                echo 'Checking Dockerfile container...'
+                echo 'Checking Docker container...'
 
                 bat 'docker ps'
             }
