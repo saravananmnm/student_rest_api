@@ -11,7 +11,7 @@ pipeline {
         GITHUB_BRANCH = 'master'
 
         // Dockerfile
-        DOCKER_IMAGE = 'saro/student_mgmt'
+        DOCKER_IMAGE = 'saravanang87/student_mgmt'
         DOCKER_TAG   = "${BUILD_NUMBER}"
 
         // Application
