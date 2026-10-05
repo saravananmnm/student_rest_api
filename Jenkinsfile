@@ -38,10 +38,7 @@ pipeline {
             steps {
                 echo 'Building Spring Boot application...'
 
-                bat '''
-                    chmod +x mvnw
-                    ./mvnw clean package -DskipTests
-                '''
+                bat 'mvnw.cmd clean package -DskipTests'
             }
         }
 
@@ -52,9 +49,7 @@ pipeline {
             steps {
                 echo 'Running unit tests...'
 
-                bat '''
-                    ./mvnw test
-                '''
+                bat 'mvnw.cmd test'
             }
         }
 
