@@ -38,7 +38,7 @@ pipeline {
             steps {
                 echo 'Building Spring Boot application...'
 
-                sh '''
+                bat '''
                     chmod +x mvnw
                     ./mvnw clean package -DskipTests
                 '''
@@ -52,7 +52,7 @@ pipeline {
             steps {
                 echo 'Running unit tests...'
 
-                sh '''
+                bat '''
                     ./mvnw test
                 '''
             }
@@ -65,7 +65,7 @@ pipeline {
             steps {
                 echo 'Building Docker image...'
 
-                sh """
+                bat """
                     docker build \
                         -t ${DOCKER_IMAGE}:${DOCKER_TAG} \
                         -t ${DOCKER_IMAGE}:latest \
@@ -89,7 +89,7 @@ pipeline {
                         )
                 ]) {
 
-                    sh '''
+                    bat '''
                         echo "f@pbDaqHY96PT=a" | docker login \
                             -u "gsaravanan3.3sgm@gmail.com" \
                             --password-stdin
@@ -110,7 +110,7 @@ pipeline {
             steps {
                 echo 'Deploying Spring Boot application...'
 
-                sh '''
+                bat '''
                     docker pull ${DOCKER_IMAGE}:latest
 
                     docker stop ${CONTAINER_NAME} || true
@@ -132,7 +132,7 @@ pipeline {
             steps {
                 echo 'Checking application health...'
 
-                sh '''
+                bat '''
                     sleep 10
 
                     curl --fail http://localhost:${APP_PORT}/actuator/health
